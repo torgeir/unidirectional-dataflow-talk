@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Unidirectional dataflow with cursors of immutable data</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<style type="text/css">
+@import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+@import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+@import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+img {max-width: 100%;}
+body {font-family: 'Droid Serif'; font-size: 100%; color: #333;}
+h1, h2, h3 {font-family: 'Yanone Kaffeesatz'; font-weight: normal;}
+h1, h2, h3, p {margin-top: 1rem; margin-bottom: 0.25rem;}
+h2 {color: #888;}
+h3 {color: #aaa;}
+a {color: rgb(249, 38, 114); text-decoration: none;}
+.remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+.inverse {background: #272822; color: #777872; text-shadow: 0 0 20px #333;}
+.inverse h1,
+.inverse h2 {color: #f3f3f3; line-height: 0.8em;}
+.inverse h2 {color: #a3a3a3;}
+.remark-slide-content h1 {font-size: 4rem;}
+.remark-slide-content h2 {font-size: 3.5rem;}
+.remark-slide-content.left {text-align: left;}
+.remark-code {text-align: left; font-size: 2rem;}
+.remark-slide-number { display: none; }
+.remark-notes-preview-area {display: none}
+.remark-notes-current-area {height: 100% !important;}
+.remark-notes { font-size: 1.2rem; }
+</style>
+</head>
+<body>
+<textarea id="source">
+name: heading
+class: center, middle, inverse
+---
+template: heading
+# Unidirectional dataflow
+## with cursors of immutable data
+## <a href="http://twitter.com/torgeir">@torgeir</a>
+---
+name: full
+class: center, middle
+---
+template: full
+
+#Html.
+--
+ Data.
+--
+ Statisk.
+--
+ Enkelt.
+
+---
+template: full
+
+#Js.
+--
+ Dynamikk.
+--
+ Logikk.
+--
+ Vanskelig.
+
+---
+template: full
+
+# "Rethinking best practices"
+## Pete hunt
+### [Slides](http://www.slideshare.net/floydophone/react-preso-v2)
+### [Video](https://www.youtube.com/watch?v=x7cQ3mrcKaY)
+---
+template: full
+
+#Blown away.
+--
+
+##Mannen er gal?
+
+---
+
+#"Library for creating user interfaces, renders your ui and responds to events, v i mvc"
+--
+
+#"Re-render the whole app on every update"
+--
+
+#"Virtual dom"
+--
+
+#"Synthetic events"
+---
+template: full
+#[@floydophone](http://www.twitter.com/floydophone)
+---
+template: heading
+
+#"Det e html i javascripten min."
+---
+template: heading
+
+#React
+## Kanskje det faktisk funker?
+
+---
+
+# Første render()
+
+```html
+function render () {
+  return <a>Github</a>;
+}
+```
+
+# så må man 
+
+```js
+var a = document.createElement('a');
+a.appendChild(
+  document.createTextNode("Github"));
+document.appendChild(a);
+```
+---
+
+# Andre render()
+
+```html
+function render () {
+  return <a href="https://github.com">Github</a>
+}
+```
+
+# må man da..?
+
+```js
+var a = document.createElement('a');
+a.href = "https://github.com";
+a.appendChild(document.createTextNode("github"));
+document.appendChild(a);
+```
+---
+template: full
+
+#Nei, React finner forskjellen!
+
+## Oversetter det til DOM-operasjoner
+
+```js
+a.href = "https://github.com"
+```
+
+---
+template: heading
+
+
+# Deklarativt
+### `<a href="..">Github</a>`
+
+---
+template: heading
+
+# Itj koss, men ka™
+
+---
+template: full
+
+# f(x) = 2x + 1
+
+--
+
+# f(2) = 5
+
+--
+
+# f(2) = ..?
+
+---
+template: full
+
+# f(x) = 2x + 1
+# f(2) = 5
+# f(2) = 5
+
+---
+template: full
+
+#Ja, så er det alltid sånn at
+
+# f(2) + f(2) = ..?
+
+---
+template: full
+
+#Ja, så er det alltid sånn at
+
+# f(2) + f(2) = 2 * f(2)
+
+---
+template: full
+
+# Views
+## Er det sånn for render() også?
+
+---
+template: full
+
+```js
+View.extend({
+
+  init: function (eventEmitter) {
+    eventEmitter.on('something',
+      () => this.toggleContent());
+  }
+
+  toggleContent: function () {
+    this.$el.find('p').toggle();
+  },
+
+  render: function () {
+    // ...
+  }
+});
+```
+
+---
+template: full
+
+# Hvordan ser viewet ut?
+## Det avhenger av hva som har skjedd!
+
+---
+template: heading
+
+# Views
+## Hva om views var som f(x)?
+
+---
+template: full
+
+#f(2) = 5
+
+--
+## ...
+# f(2) = 36
+---
+template: full
+
+# f(2) + f(2) ≠ 2 * f(2)
+
+--
+
+<div style="font-style: monospaced; color: red; opacity: 0.8; font-size: 15rem; transform: rotate(-30deg); position: absolute; top: 10rem; left: 10rem;font-family: 'Bernard MT Condensed'; border-radius: 1rem; padding: 0.5rem 4rem; border: 2rem solid red;">WTF</div>
+
+---
+template: heading
+
+# Pure functions
+## Referentially transparent
+
+### <br/>f(2) = 5
+
+---
+template: full
+
+# Pure render()
+
+```js
+function render (data) {
+  return (
+    <button
+      onClick={ doSomething(data) }
+      disabled={ data.isDisabled }>
+        { data.property }
+    </button>;
+  );
+}
+```
+
+---
+template: heading
+
+#Komponent
+## f(data) = result
+---
+template: heading
+
+<div class="graph"></div>
+
+---
+template: full
+
+# Mr. floydophone says
+## Re-render the whole app on every update
+---
+template: heading
+
+# Takk for meg!
+## <a href="http://twitter.com/torgeir">@torgeir</a>
+---
+template: heading
+
+# Ressurser
+## <a href="http://twitter.com/torgeir">twitter</a>
+## <a href="https://github.com/torgeir">github</a>
+## <a href="http://omniscientjs.github.io/">omniscient homepage</a>
+## <a href="https://github.com/omniscientjs/omniscient">omniscientjs/omniscient</a>
+## <a href="https://github.com/omniscientjs/immstruct">omniscientjs/immstruct</a>
+## <a href="https://github.com/facebook/immutable-js">facebook/immutable-js</a>
+
+</textarea>
+<script src="https://gnab.github.io/remark/downloads/remark-latest.min.js"></script>
+<script>
+  var slideshow = remark.create({highlightStyle: 'monokai'});
+</script>
+<style type="text/less">
+.graph {
+  margin-top: 1rem;
+}
+.graph:before {
+  content: "data";
+  text-align: center;
+  display: block;
+  background-color: #5af;
+  width: 5rem;
+  color: white;
+  border-radius: 5rem;
+  padding: 1rem 0.5rem;
+  margin: 0 auto 2rem auto;
+}
+.nodes {
+  font-family: Arial;
+  font-weight: 100;
+  display: flex;
+  margin: 0;
+  padding: 0;
+  align-items: flex-start;
+  justify-content: center;
+  &.nodes-flat {
+    margin-top: 1rem;
+    .node-title {
+      background-color: #888 !important;
+      border-radius: 0 !important;
+      padding: 0.5rem;
+    }
+  }
+}
+.node {
+  list-style-type: none;
+
+  flex: 1;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.node-title {
+  font-family: 'Ubuntu Mono';
+  font-size: 1.5rem;
+  cursor: pointer;
+
+  margin: 0.5rem 0.8rem;
+  padding: 1rem;
+  height: 1rem;
+  width: 1rem;
+
+  display: inline-block;
+  border-radius: 8rem;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+    </style>
+    <script src="browser.js"></script>
+    <script src="less.min.js"></script>
+    <script src="react-with-addons.min.js"></script>
+    <script src="immutable.min.js"></script>
+    <script src="immstruct.min.js"></script>
+    <script src="omniscient.min.js"></script>
+    <script type="text/babel">
+
+let { Map, Range, List } = Immutable;
+
+let createNodes = (node, levels) => Map({
+  node: node,
+  nodes: levels
+    ? Range(0, Math.random()*2)
+        .map(_ => createNodes(node + 1, levels - 1))
+        .toList()
+    : List([])
+});
+
+let data = immstruct([{
+  node: 1,
+  nodes: [
+    {
+      node: 2,
+      nodes: [
+        {
+          node: 3,
+          nodes: [
+            { node: 4, nodes: [] },
+            { node: 4, nodes: [ { node: 5, nodes: [] }, { node: 5, nodes: [] }
+            ]}
+          ]
+        },
+      ]
+    },
+    {
+      node: 2,
+      nodes: [
+        {
+          node: 3,
+          nodes: [ { node: 4, nodes: [] }  ]
+        },
+        {
+          node: 3,
+          nodes: [
+          { node: 4, nodes: [
+            { node: 5, nodes: [ { node: 6, nodes: [] }, { node: 6, nodes: []} ]},
+            { node: 5, nodes: [] }
+          ]},
+          ]
+        },
+      ]
+    },
+  ]
+}]);
+
+let VisualizeScuMixin = {
+  shouldComponentUpdate: function () {
+    this.didUpdate = omniscient.shouldComponentUpdate.apply(this, arguments);
+    return true;
+  }
+};
+
+let Node = React.createClass({
+  mixins: [VisualizeScuMixin],
+  render: function () {
+    let node = this.props.node;
+    let onClick = _ => node.updateIn(['node'], node => node + 1);
+    let css = {
+      backgroundColor: this.didUpdate ? '#f06' : '#888',
+      color: this.didUpdate ? '#fff' : '#444',
+
+    };
+    var classes = 'node' + (this.props.flat ? ' node-flat' : '');
+    return <li className={classes}>
+      <span style={css} onClick={onClick} className="node-title">{node.get('node')}</span>
+      <Nodes nodes={node.cursor('nodes')} />
+    </li>;
+  }
+});
+
+let Nodes = React.createClass({
+  mixins: [VisualizeScuMixin],
+  render: function () {
+    let classes = "nodes" + (this.props.flat ? ' nodes-flat' : '');
+    return <ul className={classes}>
+        {this.props.nodes.toArray().map(node => <Node node={node} flat={this.props.flat}/>)}
+    </ul>;
+  }
+});
+
+var el = document.querySelector('.graph');
+const render = () => React.render(<div><Nodes nodes={data.cursor()} /></div> , el);
+data.on('swap', render);
+render();
+    </script>
+</body>
+</html>
